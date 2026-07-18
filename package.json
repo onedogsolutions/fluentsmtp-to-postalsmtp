@@ -1,0 +1,25 @@
+{
+    "name": "fluentsmtp-postal",
+    "version": "1.0.0",
+    "description": "Postal API connector for FluentSMTP.",
+    "private": true,
+    "scripts": {
+        "dev": "webpack --mode=development --node-env=development --progress",
+        "watch": "webpack --mode=development --node-env=development --progress --watch",
+        "prod": "webpack --mode=production --node-env=production --progress"
+    },
+    "license": "GPL-2.0-or-later",
+    "devDependencies": {
+        "laravel-mix": "^6.0.49",
+        "resolve-url-loader": "^4.0.0",
+        "sass": "^1.36.0",
+        "sass-loader": "^12.1.0",
+        "vue-loader": "^15.9.7",
+        "vue-template-compiler": "^2.6.14",
+        "webpack": "^5.88.2"
+    },
+    "dependencies": {
+        "element-ui": "^2.15.14",
+        "vue": "^2.6.14"
+    }
+}

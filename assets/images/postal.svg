@@ -1,0 +1,6 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Postal">
+    <rect width="64" height="64" rx="12" fill="#1F8A70"/>
+    <path d="M14 22c0-1.657 1.343-3 3-3h30c1.657 0 3 1.343 3 3v20c0 1.657-1.343 3-3 3H17c-1.657 0-3-1.343-3-3V22z" fill="#fff"/>
+    <path d="M15 22l17 13 17-13" stroke="#1F8A70" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M50 22L36 33l14 11V22z" fill="#E6F4F0"/>
+</svg>

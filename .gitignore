@@ -46,3 +46,13 @@ wp-config.php
 # Note: If you wish to whitelist themes,
 # uncomment the next line
 #/wp-content/themes
+# --- Postal API Connector for FluentSMTP ---
+# Build tooling
+/node_modules/
+/vendor/
+npm-debug.log*
+package-lock.json
+composer.lock
+
+# Keep the compiled admin bundle committed so the plugin runs on install:
+# assets/ is intentionally NOT ignored.

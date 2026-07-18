@@ -1,0 +1,87 @@
+@import '~element-ui/lib/theme-chalk/index.css';
+
+.fluentsmtp_postal_wrap {
+    max-width: 960px;
+    margin: 20px 0;
+
+    .fsp_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+    }
+
+    .fsp_header_brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .fsp_logo {
+        width: 44px;
+        height: 44px;
+    }
+
+    h1 {
+        font-size: 22px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .fsp_sub {
+        margin: 2px 0 0;
+        color: #6b7280;
+    }
+
+    .fsp_card {
+        border: 1px solid #e5e7eb;
+    }
+
+    .fsp_muted {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .fsp_empty {
+        text-align: center;
+        padding: 40px 0;
+    }
+
+    .fs_config_title {
+        font-size: 16px;
+        margin: 0 0 12px;
+    }
+
+    .fss_config_section {
+        padding: 15px 0;
+        border-top: 1px solid #f0f0f0;
+
+        &:first-child {
+            border-top: none;
+        }
+    }
+
+    .fsmtp_compact .el-form-item {
+        margin-bottom: 10px;
+    }
+
+    .small-help-text {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .code_snippet textarea {
+        font-family: Menlo, Consolas, monospace;
+        font-size: 12px;
+        padding: 8px;
+        border: 1px solid #dcdfe6;
+        border-radius: 4px;
+        min-height: 44px;
+    }
+
+    label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+}
