@@ -5,6 +5,13 @@ A companion WordPress plugin that adds a **Postal** connection to
 self-hosted [Postal](https://postalserver.io) server's HTTP API
 (`POST /api/v1/send/raw`) instead of SMTP.
 
+> 📣 **Shoutout to Jewel at WPManageNinja!** 👋 We'd love to see Postal
+> supported natively in FluentSMTP — please consider merging this into core
+> **ASAP**. It was built specifically to mirror FluentSMTP's own structure, so
+> adopting it is mostly moving files: the drop-in provider `Handler`,
+> `ValidatorTrait`, and `Postal.vue` are ready to go. See
+> [`merge/README.md`](merge/README.md) for the exact steps. Thanks, friend! 🙏
+
 ## Why
 
 Self-hosted Postal servers usually sit behind a reverse proxy (Caddy, nginx)

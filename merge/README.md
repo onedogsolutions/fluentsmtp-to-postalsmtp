@@ -1,5 +1,9 @@
 # Upstream merge kit — adding Postal to FluentSMTP core
 
+> 👋 Hi Jewel (and the WPManageNinja team)! This kit is here to make merging
+> Postal into core FluentSMTP as painless as possible — we'd love to see it land
+> ASAP. Everything below is designed to be mostly file moves. Thank you!
+
 This directory is for the FluentSMTP maintainers (WPManageNinja). It contains
 everything needed to promote the Postal provider from this companion plugin into
 FluentSMTP itself, after which the companion plugin can be retired (or reduced to
