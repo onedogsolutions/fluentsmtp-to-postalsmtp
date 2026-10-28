@@ -4,7 +4,7 @@
  * Plugin Name:       Postal API Connector for FluentSMTP
  * Plugin URI:        https://github.com/onedogsolutions/fluentsmtp-to-postalsmtp
  * Description:       Adds a Postal connection to FluentSMTP that delivers mail over the Postal HTTP API instead of SMTP, avoiding SMTP TLS issues on self-hosted Postal servers.
- * Version:           1.0.0
+ * Version:           1.0.2
  * Requires at least: 5.5
  * Requires PHP:      7.4
  * Author:            One Dog Solutions
@@ -24,7 +24,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('FLUENTSMTP_POSTAL_VERSION', '1.0.0');
+define('FLUENTSMTP_POSTAL_VERSION', '1.0.2');
 define('FLUENTSMTP_POSTAL_FILE', __FILE__);
 define('FLUENTSMTP_POSTAL_DIR', plugin_dir_path(__FILE__));
 define('FLUENTSMTP_POSTAL_URL', plugin_dir_url(__FILE__));
@@ -71,3 +71,16 @@ spl_autoload_register(function ($class) {
 add_action('plugins_loaded', function () {
     (new \FluentSmtpPostal\Bootstrap())->init();
 }, 20);
+
+/**
+ * Deactivating this plugin unregisters the "postal" provider from FluentSMTP's
+ * container, which turns every stored Postal connection into a route that
+ * throws "Unknown mail provider." inside wp_mail(). Parking them first keeps the
+ * site sending; activation puts them back.
+ *
+ * Registered here rather than in Bootstrap because the hooks must exist on
+ * every request - Bootstrap::init() returns early when FluentSMTP is missing,
+ * and that is precisely the case where the settings still need cleaning up.
+ */
+register_activation_hook(__FILE__, ['FluentSmtpPostal\Lifecycle', 'activate']);
+register_deactivation_hook(__FILE__, ['FluentSmtpPostal\Lifecycle', 'deactivate']);

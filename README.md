@@ -50,6 +50,25 @@ Saved connections appear in FluentSMTP and are used automatically for matching
 `From` addresses, including FluentSMTP's email logging, fallback connections and
 resend-from-log.
 
+### Postal has no username or password
+
+Postal authenticates a delivery with a single **server API key**, sent as the
+`X-Server-API-Key` header, so a Postal connection is a **server URL + API key**
+— nothing else. There is no SMTP username, password, port or encryption setting
+to enter anywhere in this plugin or in FluentSMTP.
+
+Because of that, **Postal connections are always created, tested and edited at
+Settings → Postal (FluentSMTP)**, not inside FluentSMTP's own Add Connection
+wizard. FluentSMTP 2.4.x renders each provider's fields from a Vue component
+compiled into its own bundle, so a provider that ships separately cannot appear
+as a form there. Postal connections still show up in FluentSMTP's connection
+list with their logo and details, and are selected for matching `From`
+addresses exactly like a built-in provider.
+
+FluentSMTP's wizard shows a note pointing at the Postal screen, and its
+Connections screen carries a dismissible notice doing the same; both go away
+once native fields exist, which requires the upstream merge below.
+
 ### Storing the API key in wp-config.php (optional)
 
 Instead of the database, choose "Store API Keys in Config File" and add:
@@ -86,10 +105,36 @@ composer install  # dev-only: PHP lint / phpcs
 
 The compiled bundle in `assets/` is committed so the plugin runs on install.
 
+## Packaging a release
+
+```bash
+./bin/package.sh
+```
+
+This writes `dist/fluentsmtp-postal-<version>.zip`, ready for
+**Plugins → Add New → Upload Plugin** (or `wp plugin install`). The version comes
+from the plugin header in `fluentsmtp-postal.php`, so bump it there — and
+`Stable tag` in `readme.txt` — before tagging a release.
+
+The archive contains a single top-level `fluentsmtp-postal/` directory with only
+what runs at runtime: the PHP sources, the compiled `assets/` bundle, `readme.txt`
+and `LICENSE`. Source files under `resources/`, the `merge/` upstream kit, npm and
+webpack configs, PHP dev tooling and CI config are excluded.
+
+After building, the script boots the staged copy in isolation
+([`bin/smoke-test.php`](bin/smoke-test.php)) to confirm the plugin's autoloader,
+classes and asset paths resolve — both with and without FluentSMTP present — and
+fails the build otherwise.
+
 ## Upstream merge
 
 This connector is structured so FluentSMTP's maintainers can adopt Postal as a
 first-class provider with mostly file moves. See [`merge/README.md`](merge/README.md).
+
+Until that merge ships, Postal's fields live on this plugin's screen rather than
+inside FluentSMTP's wizard. The merge kit is written against an older
+Vue 2-era FluentSMTP; FluentSMTP 2.4 is Vue 3 + Element Plus, so the provider
+partial needs porting before it can be merged (see `merge/README.md`).
 
 ## License
 

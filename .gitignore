@@ -54,5 +54,9 @@ npm-debug.log*
 package-lock.json
 composer.lock
 
+# Release artifacts produced by bin/package.sh
+/dist/
+
 # Keep the compiled admin bundle committed so the plugin runs on install:
 # assets/ is intentionally NOT ignored.
+.DS_Store

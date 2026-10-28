@@ -58,18 +58,34 @@ Vue.prototype.$confirm = MessageBox.confirm;
 
 locale.use(lang);
 
-const appVars = window.FluentSmtpPostal || {};
+const appVars = Object.assign({
+    assets_url: '',
+    ajaxurl: '',
+    nonce: '',
+    plugin_url: '',
+    fluentsmtp_url: '',
+    settings_url: '',
+    user_email: '',
+    crypto_available: true,
+    wp_config_const: '',
+    defaults: {},
+    connections: {},
+    trans: {}
+}, window.FluentSmtpPostal || {});
+
+/**
+ * appVars lives on the prototype, not in mixin data(): components read it
+ * inside their own data() function, where instance data is not initialised
+ * yet. A data() based mixin makes this.appVars undefined at that point and
+ * the whole app fails to mount.
+ */
+Vue.prototype.appVars = appVars;
 
 /**
  * Global helpers mirroring FluentSMTP's Vue prototype so the shared provider
  * partial (Postal.vue) uses the exact same $t and $post it would upstream.
  */
 Vue.mixin({
-    data() {
-        return {
-            appVars: appVars
-        };
-    },
     methods: {
         $t(string) {
             return (appVars.trans && appVars.trans[string]) || string;

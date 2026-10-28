@@ -1,6 +1,6 @@
 {
     "name": "fluentsmtp-postal",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "description": "Postal API connector for FluentSMTP.",
     "private": true,
     "scripts": {
@@ -16,7 +16,7 @@
         "sass-loader": "^12.1.0",
         "vue-loader": "^15.9.7",
         "vue-template-compiler": "^2.6.14",
-        "webpack": "^5.88.2"
+        "webpack": "5.88.2"
     },
     "dependencies": {
         "element-ui": "^2.15.14",

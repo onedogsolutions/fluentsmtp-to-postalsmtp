@@ -161,15 +161,18 @@ class ConnectionStore
         $settings['mappings']    = $mappings;
 
         // Default connection: adopt this one if none set, or if it was the one edited.
+        //
+        // Only that one key is written. The rest of misc comes from FluentSMTP's
+        // own defaults (app/Services/Mailer/Providers/config.php: log_emails,
+        // disable_fluentcrm_logs, simulate_emails, send_as_text, fallback_connection)
+        // and merging a hand-rolled default list over it here would quietly turn
+        // email logging on for a site that had chosen to leave it off.
         $misc = isset($settings['misc']) && is_array($settings['misc']) ? $settings['misc'] : [];
-        if (empty($misc['default_connection']) || ($editingKey && $misc['default_connection'] === $editingKey)) {
+        $currentDefault = isset($misc['default_connection']) ? $misc['default_connection'] : '';
+        if (empty($currentDefault) || ($editingKey && $currentDefault === $editingKey)) {
             $misc['default_connection'] = $key;
         }
-        $settings['misc'] = wp_parse_args($misc, [
-            'log_emails'              => 'yes',
-            'log_saved_interval_days' => '14',
-            'default_connection'      => $key,
-        ]);
+        $settings['misc'] = $misc;
 
         \fluentMailSetSettings($settings);
         $this->bustCaches($senderEmails);

@@ -31,6 +31,36 @@ map. Also change the API-key wp-config constant name from
 `FLUENTMAIL_POSTAL_API_KEY`) in both `Handler::getApiKey()` and
 `ValidatorTrait::validateProviderInformation()`.
 
+## Status against FluentSMTP 2.4
+
+The two PHP files are still drop-in. The Vue partial is **not**: it was written
+against the Vue 2 + Element UI era of FluentSMTP, and 2.4 is Vue 3 + Element
+Plus. Port it by copying the shape of an existing API provider in core
+(`Smtp2Go.vue`, `PostMark.vue`):
+
+- `v-model` → `modelValue` + `update:modelValue`
+- `slot="content"` → `#content`
+- `el-radio-button label` → `value`, drop `size="mini"`
+- take `$t` from the app, import `InputPassword` / `Error` / `Errors` from
+  `@/Pieces` and `@/Bits`, and `watch` `connection.key_store` to clear
+  `api_key` the way the other providers do
+
+The companion plugin does **not** depend on that port: Postal's fields live on
+its own screen (`Settings → Postal (FluentSMTP)`), and the descriptor it injects
+into FluentSMTP is metadata only (title, logo, defaults, a note pointing at that
+screen).
+
+### The encryption hand-over needs a migration
+
+With `'postal' => 'api_key'` in core's encryption maps, core encrypts and
+decrypts the key itself. Connections saved by the companion plugin hold
+`postalenc::…` values encrypted with the plugin's own scheme, which core will
+not decrypt. Ship a migration in the same release as the merge: detect the
+`postalenc::` prefix, decrypt with the plugin's `Crypto`, and re-save through
+core's setter so the value is re-encrypted under core's scheme (once, recorded
+by an option flag). Verify a legacy connection still sends and that the value is
+not double-encrypted.
+
 ## Edits to apply to existing core files
 
 Each snippet below is a minimal addition. See the referenced `.patch`/`.php`
@@ -43,7 +73,8 @@ files in this directory for the exact code.
    `$providerKeyMaps` arrays (in `fluentMailGetSettings` and
    `fluentMailSetSettings`) so the API key is encrypted at rest by core. See
    `encryption-map.entry.php`. Once core does this, delete the companion
-   plugin's `Support/Crypto.php` usage from the handler's `setSettings()`.
+   plugin's `Support/Crypto.php` usage from the handler's `setSettings()`, and
+   ship the encryption hand-over migration described above.
 4. **`resources/admin/Modules/Settings/ConnectionWizard.vue`** — import and
    register the `Postal` component. See `connection-wizard.entry.js`.
 

@@ -3,6 +3,10 @@ const mix = require('laravel-mix');
 
 mix.options({ processCssUrls: false });
 
+// Desktop notifications make the build exit non-zero on macOS and CI machines
+// that cannot spawn the notifier, even though compilation succeeded.
+mix.disableNotifications();
+
 mix.setPublicPath('assets');
 mix.setResourceRoot('../');
 

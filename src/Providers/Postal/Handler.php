@@ -295,4 +295,110 @@ class Handler extends BaseHandler
 
         return $this;
     }
+
+    /**
+     * What FluentSMTP shows in a connection's details panel.
+     *
+     * The base implementation prints four rows (type, sender email, sender name,
+     * force-from-name) through admin.general_connection_info. Postal's settings
+     * are mostly not among them, and the two that matter most - the server URL
+     * and where the credential is kept - are the two an admin opens this panel to
+     * check. Both are added through the view's extra_rows hook.
+     *
+     * The key itself is never rendered: the panel is HTML in an admin screen, and
+     * the stored value is ciphertext anyway. Only its state is reported.
+     *
+     * @param array $connection
+     * @return array{info:string}
+     */
+    public function getConnectionInfo($connection)
+    {
+        $connection = array_merge(\FluentSmtpPostal\Support\ConnectionStore::defaults(), (array) $connection);
+
+        $isWpConfig  = $connection['key_store'] === 'wp_config';
+        $keyDefined  = defined('FLUENTSMTP_POSTAL_API_KEY') && FLUENTSMTP_POSTAL_API_KEY;
+        $sendFrom    = $this->settingEmails($connection);
+
+        $rows = [
+            [
+                'title'   => __('Postal Server', 'fluentsmtp-postal'),
+                'content' => $connection['server_url']
+                    ? esc_html($connection['server_url'])
+                    : '<em>' . esc_html__('Not set', 'fluentsmtp-postal') . '</em>',
+            ],
+            [
+                'title'   => __('API Credential', 'fluentsmtp-postal'),
+                'content' => $isWpConfig
+                    ? sprintf(
+                        /* translators: %s: wp-config.php constant name */
+                        esc_html__('From %s in wp-config.php', 'fluentsmtp-postal'),
+                        '<code>FLUENTSMTP_POSTAL_API_KEY</code>'
+                    )
+                    : esc_html__('Stored in the database (encrypted)', 'fluentsmtp-postal'),
+            ],
+            [
+                'title'   => __('API Key', 'fluentsmtp-postal'),
+                'content' => ($isWpConfig ? $keyDefined : !empty($connection['api_key']))
+                    ? esc_html__('Configured', 'fluentsmtp-postal')
+                    : '<span style="color:#b32d2e">' . esc_html__('Missing — sending will fail', 'fluentsmtp-postal') . '</span>',
+            ],
+            [
+                'title'   => __('TLS Verification', 'fluentsmtp-postal'),
+                'content' => $connection['verify_ssl'] === 'no'
+                    ? '<span style="color:#b32d2e">' . esc_html__('Disabled — the connection is encrypted but unauthenticated', 'fluentsmtp-postal') . '</span>'
+                    : esc_html__('Enabled', 'fluentsmtp-postal'),
+            ],
+            [
+                'title'   => __('Sending From', 'fluentsmtp-postal'),
+                'content' => $sendFrom
+                    ? esc_html(implode(', ', $sendFrom))
+                    : '<em>' . esc_html__('No sender addresses mapped', 'fluentsmtp-postal') . '</em>',
+            ],
+            [
+                'title'   => __('Treat as Bounce', 'fluentsmtp-postal'),
+                'content' => $connection['bounce'] === 'yes'
+                    ? esc_html__('Yes', 'fluentsmtp-postal')
+                    : esc_html__('No', 'fluentsmtp-postal'),
+            ],
+        ];
+
+        if ($connection['allow_insecure_url'] === 'yes') {
+            $rows[] = [
+                'title'   => __('Plain HTTP', 'fluentsmtp-postal'),
+                'content' => '<span style="color:#b32d2e">' . esc_html__('Allowed — the API key travels unencrypted', 'fluentsmtp-postal') . '</span>',
+            ];
+        }
+
+        $connection['extra_rows'] = $rows;
+
+        return [
+            'info' => (string) \fluentMail('view')->make('admin.general_connection_info', [
+                'connection' => $connection,
+            ]),
+        ];
+    }
+
+    /**
+     * The sender addresses this connection can send from.
+     *
+     * @param array $connection
+     * @return array<int,string>
+     */
+    protected function settingEmails($connection)
+    {
+        $emails = [];
+
+        if (!empty($connection['sender_email'])) {
+            $emails[] = $connection['sender_email'];
+        }
+
+        foreach ((array) Arr::get($connection, 'additional_senders', []) as $entry) {
+            $email = is_array($entry) ? Arr::get($entry, 'email') : $entry;
+            if ($email) {
+                $emails[] = $email;
+            }
+        }
+
+        return array_values(array_unique(array_filter($emails)));
+    }
 }

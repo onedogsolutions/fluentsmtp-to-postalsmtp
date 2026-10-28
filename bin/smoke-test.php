@@ -1,0 +1,137 @@
+<?php
+/**
+ * Minimal WordPress stub harness: proves the plugin shipped in the zip parses,
+ * autoloads every class it defines, and boots in both dependency states.
+ *
+ * Live-fire check for bin/package.sh output, not part of the shipped plugin.
+ *
+ * Usage: php bin/smoke-test.php <plugin-dir> [with-fluentsmtp]
+ */
+
+$pluginDir = rtrim($argv[1], '/') . '/';
+$withFluent = ($argv[2] ?? '') === 'with-fluentsmtp';
+
+define('ABSPATH', $pluginDir);
+
+$GLOBALS['hooks'] = [];
+function add_action($tag, $cb, $priority = 10, $args = 1)
+{
+    $GLOBALS['hooks'][$tag][] = $cb;
+    return true;
+}
+function add_filter($tag, $cb, $priority = 10, $args = 1) { return true; }
+function did_action($tag) { return 0; }
+function is_admin() { return true; }
+function plugin_dir_path($f) { return dirname($f) . '/'; }
+function plugin_dir_url($f) { return 'http://example.test/wp-content/plugins/' . basename(dirname($f)) . '/'; }
+function plugin_basename($f) { return basename(dirname($f)) . '/' . basename($f); }
+function load_plugin_textdomain($d, $r = false, $p = '') { return true; }
+function current_user_can($c) { return true; }
+function add_submenu_page(...$a) { return null; }
+function wp_enqueue_script(...$a) { return null; }
+function wp_enqueue_style(...$a) { return null; }
+function wp_localize_script(...$a) { return null; }
+function admin_url($p = '') { return 'http://example.test/wp-admin/' . $p; }
+function wp_create_nonce($a) { return 'nonce'; }
+function wp_get_current_user() { return (object) ['user_email' => 'a@example.test']; }
+function wp_json_encode($d) { return json_encode($d); }
+function esc_url($u) { return $u; }
+function esc_html__($s, $d = '') { return $s; }
+function __($s, $d = '') { return $s; }
+
+// Activation/deactivation hooks are registered at file scope, so the harness
+// has to accept them before the plugin is required. They are recorded rather
+// than run: the lifecycle needs FluentSMTP's settings API, which a stub cannot
+// meaningfully provide.
+function register_activation_hook($file, $cb)
+{
+    $GLOBALS['hooks']['activate'][] = $cb;
+    return true;
+}
+function register_deactivation_hook($file, $cb)
+{
+    $GLOBALS['hooks']['deactivate'][] = $cb;
+    return true;
+}
+
+// Only reached when the lifecycle decides FluentSMTP is usable, which the
+// stubs below never allow - but a missing function would be a fatal rather
+// than a skip, so keep them defined.
+$GLOBALS['options'] = [];
+function get_option($key, $default = false) { return $GLOBALS['options'][$key] ?? $default; }
+function update_option($key, $value) { $GLOBALS['options'][$key] = $value; return true; }
+function delete_option($key) { unset($GLOBALS['options'][$key]); return true; }
+
+if ($withFluent) {
+    define('FLUENTMAIL', 'fluent-smtp/fluent-smtp.php');
+
+    // FluentSMTP's own classes the provider extends.
+    require __DIR__ . '/stubs-fluentsmtp.php';
+
+    function fluentMail()
+    {
+        return new class {
+            public $bound = [];
+            public function singleton($abstract, $concrete = null) { $this->bound[$abstract] = $concrete; }
+            public function alias($abstract, $alias) { $this->bound['alias:' . $alias] = $abstract; }
+        };
+    }
+}
+
+require $pluginDir . 'fluentsmtp-postal.php';
+
+foreach ($GLOBALS['hooks']['plugins_loaded'] ?? [] as $cb) {
+    $cb();
+}
+
+echo 'mode: ' . ($withFluent ? 'FluentSMTP active' : 'FluentSMTP missing') . "\n";
+echo 'version: ' . FLUENTSMTP_POSTAL_VERSION . "\n";
+
+$classes = [
+    'FluentSmtpPostal\Bootstrap',
+    'FluentSmtpPostal\ProviderRegistrar',
+    'FluentSmtpPostal\Lifecycle',
+    'FluentSmtpPostal\Admin\AdminPage',
+    'FluentSmtpPostal\Admin\AjaxController',
+    'FluentSmtpPostal\Support\ConnectionStore',
+    'FluentSmtpPostal\Support\Crypto',
+];
+
+// The provider subclasses FluentSMTP's BaseHandler, so it can only be declared
+// when FluentSMTP's classes exist — which is exactly the situation the plugin's
+// own dependency check guards for.
+if ($withFluent) {
+    $classes[] = 'FluentMail\App\Services\Mailer\Providers\Postal\Handler';
+    $classes[] = 'FluentMail\App\Services\Mailer\Providers\Postal\ValidatorTrait';
+}
+
+$assets = [
+    'assets/admin/js/postal-admin.js',
+    'assets/admin/css/postal-admin.css',
+    'assets/admin/css/fonts/element-icons.woff',
+    'assets/images/postal.svg',
+];
+
+$failed = 0;
+echo "classes:\n";
+foreach ($classes as $class) {
+    $ok = class_exists($class) || trait_exists($class);
+    echo '  ' . ($ok ? 'ok  ' : 'FAIL') . ' ' . $class . "\n";
+    $failed += $ok ? 0 : 1;
+}
+
+echo "assets:\n";
+foreach ($assets as $asset) {
+    $ok = is_readable($pluginDir . $asset);
+    echo '  ' . ($ok ? 'ok  ' : 'FAIL') . ' ' . $asset . "\n";
+    $failed += $ok ? 0 : 1;
+}
+
+echo "hooks:\n";
+foreach (['plugins_loaded', 'fluentMail_loaded', 'admin_menu', 'admin_notices', 'activate', 'deactivate'] as $tag) {
+    $count = count($GLOBALS['hooks'][$tag] ?? []);
+    echo "  $tag: $count\n";
+}
+
+echo $failed === 0 ? "SMOKE OK\n" : "SMOKE FAILED ($failed)\n";
+exit($failed === 0 ? 0 : 1);
