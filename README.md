@@ -31,7 +31,8 @@ what SMTP would have carried.
 
 - WordPress 5.5+
 - PHP 7.4+
-- The **FluentSMTP** plugin, installed and active
+- The **FluentSMTP** plugin, installed and active — **2.4 or later** to add or
+  edit Postal connections (existing ones keep sending on older versions)
 - A **Postal** server with an API credential (Server → Credentials → New
   Credential → type **API**) and a verified sending domain
 
@@ -39,39 +40,52 @@ what SMTP would have carried.
 
 1. Install and activate **FluentSMTP**.
 2. Install and activate this plugin.
-3. Go to **Settings → Postal (FluentSMTP)** and add a connection:
+3. Go to **FluentSMTP → Connections → Add Connection** (the plugin's
+   **Settings** link on the Plugins screen goes there too) and pick **Postal**:
+   - **From Email / Name** — a sender on a domain verified in Postal
    - **Postal Server URL** — e.g. `https://postal.example.com`
    - **Server API Key** — the API credential from your Postal server
-   - **From Email / Name** — a sender on a domain verified in Postal
-4. Click **Test Connection**, then **Save**. Use **Send Test** to send a real
-   email through Postal.
+4. Click **Save Connection Settings**. The connection is checked against your
+   Postal server before it is saved. Use FluentSMTP's **Email Test** screen to
+   send a real email through it.
 
-Saved connections appear in FluentSMTP and are used automatically for matching
-`From` addresses, including FluentSMTP's email logging, fallback connections and
-resend-from-log.
+Postal connections are edited and deleted from FluentSMTP's connection list like
+any other provider, and are used automatically for matching `From` addresses,
+including FluentSMTP's email logging, fallback connections and resend-from-log.
 
 ### Postal has no username or password
 
 Postal authenticates a delivery with a single **server API key**, sent as the
 `X-Server-API-Key` header, so a Postal connection is a **server URL + API key**
 — nothing else. There is no SMTP username, password, port or encryption setting
-to enter anywhere in this plugin or in FluentSMTP.
+to enter.
 
-Because of that, **Postal connections are always created, tested and edited at
-Settings → Postal (FluentSMTP)**, not inside FluentSMTP's own Add Connection
-wizard. FluentSMTP 2.4.x renders each provider's fields from a Vue component
-compiled into its own bundle, so a provider that ships separately cannot appear
-as a form there. Postal connections still show up in FluentSMTP's connection
-list with their logo and details, and are selected for matching `From`
-addresses exactly like a built-in provider.
+### How the form gets into FluentSMTP
 
-FluentSMTP's wizard shows a note pointing at the Postal screen, and its
-Connections screen carries a dismissible notice doing the same; both go away
-once native fields exist, which requires the upstream merge below.
+FluentSMTP has no API for third-party providers, so this plugin stitches Postal
+into its admin app without modifying it:
+
+- The Postal provider descriptor (title, logo, default options) is merged into
+  the providers map FluentSMTP's app reads, which puts Postal in the picker,
+  the connection list and the details view.
+- `assets/admin/js/postal-fluentsmtp.js` registers the Postal form as a global
+  `postal` component on FluentSMTP's own Vue app, just before it mounts.
+  FluentSMTP's wizard renders provider fields through
+  `<component :is="connection.provider">`, so the form appears in its slot. The
+  bundle uses FluentSMTP's Vue runtime (`window.FluentMail.Vue`) rather than
+  shipping its own.
+- FluentSMTP's own save endpoint cannot store a provider missing from its
+  built-in catalog, so Postal saves posted to it are answered by this plugin
+  (validation, live connection check, encrypted storage) in the same response
+  format. Every other provider's save goes to FluentSMTP unchanged.
+
+These rely on FluentSMTP 2.4 internals. The plugin checks for them and does
+nothing when they are missing; merging the provider upstream (below) removes
+the need for any of it.
 
 ### Storing the API key in wp-config.php (optional)
 
-Instead of the database, choose "Store API Keys in Config File" and add:
+Instead of the database, choose "Store in wp-config.php" and add:
 
 ```php
 define( 'FLUENTSMTP_POSTAL_API_KEY', 'your-postal-api-key' );
@@ -92,9 +106,11 @@ security keys (requires the OpenSSL PHP extension).
 
 ## Development
 
-The admin setup screen is a Vue 2 + Element UI app built with Laravel Mix, using
-the same stack and component conventions as FluentSMTP so the provider form can
-be merged upstream.
+The Postal form is a Vue 3 + Element Plus component built with Laravel Mix,
+written against FluentSMTP 2.4's own conventions (`$t`, `Pieces/InputPassword`,
+`Pieces/Error`) so it can be merged upstream unchanged. `vue` is a webpack
+external resolving to `FluentMail.Vue`; Element Plus components are imported
+individually and their CSS comes from FluentSMTP.
 
 ```bash
 npm install
@@ -131,10 +147,7 @@ fails the build otherwise.
 This connector is structured so FluentSMTP's maintainers can adopt Postal as a
 first-class provider with mostly file moves. See [`merge/README.md`](merge/README.md).
 
-Until that merge ships, Postal's fields live on this plugin's screen rather than
-inside FluentSMTP's wizard. The merge kit is written against an older
-Vue 2-era FluentSMTP; FluentSMTP 2.4 is Vue 3 + Element Plus, so the provider
-partial needs porting before it can be merged (see `merge/README.md`).
+The provider partial is already Vue 3 + Element Plus, matching FluentSMTP 2.4.
 
 ## License
 

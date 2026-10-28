@@ -36,4 +36,4 @@ jobs:
       - name: Build
         run: npm run prod
       - name: Verify bundle was produced
-        run: test -f assets/admin/js/postal-admin.js && test -f assets/admin/css/postal-admin.css
+        run: test -f assets/admin/js/postal-fluentsmtp.js && grep -qF 'FluentMail.Vue' assets/admin/js/postal-fluentsmtp.js

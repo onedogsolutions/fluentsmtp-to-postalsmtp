@@ -2,8 +2,8 @@
 
 namespace FluentSmtpPostal;
 
-use FluentSmtpPostal\Admin\AdminPage;
-use FluentSmtpPostal\Admin\AjaxController;
+use FluentSmtpPostal\Admin\FluentSmtpIntegration;
+use FluentSmtpPostal\Admin\SaveInterceptor;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -49,8 +49,8 @@ class Bootstrap
         add_action('admin_notices', [$this, 'renderRestoredNotice']);
 
         if (is_admin()) {
-            (new AdminPage())->register();
-            (new AjaxController())->register();
+            (new FluentSmtpIntegration())->register();
+            (new SaveInterceptor())->register();
         }
 
         load_plugin_textdomain(

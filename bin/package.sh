@@ -33,15 +33,13 @@ fi
 
 # These are the artifacts the plugin cannot run without. The compiled bundle is
 # committed to the repo, so a missing one means the checkout is incomplete and
-# the zip would install but render a blank settings screen.
+# the zip would install but FluentSMTP would show no fields for Postal.
 REQUIRED=(
     "$SLUG.php"
     "src/Bootstrap.php"
     "src/ProviderRegistrar.php"
     "src/Providers/Postal/Handler.php"
-    "assets/admin/js/postal-admin.js"
-    "assets/admin/css/postal-admin.css"
-    "assets/admin/css/fonts/element-icons.woff"
+    "assets/admin/js/postal-fluentsmtp.js"
     "assets/images/postal.svg"
 )
 
@@ -54,11 +52,13 @@ for path in "${REQUIRED[@]}"; do
 done
 
 # A bundle that compiled without the settings fields would install cleanly and
-# then show an empty screen, which is indistinguishable from a broken deploy.
-BUNDLE="$ROOT/assets/admin/js/postal-admin.js"
-for marker in 'Postal Server URL' 'Server API Key'; do
+# then show an empty Postal form in FluentSMTP, which is indistinguishable from a
+# broken deploy. The last marker is the external that binds it to FluentSMTP's
+# own Vue; without it the bundle would carry a second Vue runtime.
+BUNDLE="$ROOT/assets/admin/js/postal-fluentsmtp.js"
+for marker in 'Postal Server URL' 'Server API Key' 'FluentMail.Vue'; do
     if ! grep -qF "$marker" "$BUNDLE"; then
-        echo "error: admin bundle is missing the \"$marker\" field" >&2
+        echo "error: admin bundle is missing \"$marker\"" >&2
         echo "       (the bundle is stale; run 'npm run prod' and commit assets/)" >&2
         exit 1
     fi

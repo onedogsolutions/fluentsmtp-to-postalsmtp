@@ -38,6 +38,13 @@ function wp_json_encode($d) { return json_encode($d); }
 function esc_url($u) { return $u; }
 function esc_html__($s, $d = '') { return $s; }
 function __($s, $d = '') { return $s; }
+function wp_unslash($v) { return $v; }
+function sanitize_text_field($v) { return trim((string) $v); }
+function sanitize_email($v) { return trim((string) $v); }
+function is_email($v) { return (bool) filter_var($v, FILTER_VALIDATE_EMAIL); }
+function esc_url_raw($v) { return $v; }
+function untrailingslashit($v) { return rtrim($v, '/\\'); }
+function wp_specialchars_decode($v, $q = 0) { return $v; }
 
 // Activation/deactivation hooks are registered at file scope, so the harness
 // has to accept them before the plugin is required. They are recorded rather
@@ -63,10 +70,15 @@ function update_option($key, $value) { $GLOBALS['options'][$key] = $value; retur
 function delete_option($key) { unset($GLOBALS['options'][$key]); return true; }
 
 if ($withFluent) {
-    define('FLUENTMAIL', 'fluent-smtp/fluent-smtp.php');
+    define('FLUENTMAIL', 'fluentmail');
 
     // FluentSMTP's own classes the provider extends.
     require __DIR__ . '/stubs-fluentsmtp.php';
+
+    function fluentMailGetSettings($defaults = [], $cached = true)
+    {
+        return $GLOBALS['fluent_settings'] ?? [];
+    }
 
     function fluentMail()
     {
@@ -91,8 +103,8 @@ $classes = [
     'FluentSmtpPostal\Bootstrap',
     'FluentSmtpPostal\ProviderRegistrar',
     'FluentSmtpPostal\Lifecycle',
-    'FluentSmtpPostal\Admin\AdminPage',
-    'FluentSmtpPostal\Admin\AjaxController',
+    'FluentSmtpPostal\Admin\FluentSmtpIntegration',
+    'FluentSmtpPostal\Admin\SaveInterceptor',
     'FluentSmtpPostal\Support\ConnectionStore',
     'FluentSmtpPostal\Support\Crypto',
 ];
@@ -106,9 +118,7 @@ if ($withFluent) {
 }
 
 $assets = [
-    'assets/admin/js/postal-admin.js',
-    'assets/admin/css/postal-admin.css',
-    'assets/admin/css/fonts/element-icons.woff',
+    'assets/admin/js/postal-fluentsmtp.js',
     'assets/images/postal.svg',
 ];
 
@@ -128,9 +138,82 @@ foreach ($assets as $asset) {
 }
 
 echo "hooks:\n";
-foreach (['plugins_loaded', 'fluentMail_loaded', 'admin_menu', 'admin_notices', 'activate', 'deactivate'] as $tag) {
+foreach (['plugins_loaded', 'fluentMail_loaded', 'admin_notices', 'fluent_mail_loading_app', 'wp_ajax_fluentmail-post-settings', 'activate', 'deactivate'] as $tag) {
     $count = count($GLOBALS['hooks'][$tag] ?? []);
     echo "  $tag: $count\n";
+}
+
+/**
+ * @param bool   $ok
+ * @param string $label
+ */
+function smoke_check($ok, $label)
+{
+    echo '  ' . ($ok ? 'ok  ' : 'FAIL') . ' ' . $label . "\n";
+    return $ok ? 0 : 1;
+}
+
+echo "integration:\n";
+
+// Postal is configured inside FluentSMTP's own screen: no page of its own.
+$failed += smoke_check(empty($GLOBALS['hooks']['admin_menu']), 'no admin menu page is registered');
+
+if ($withFluent) {
+    $failed += smoke_check(
+        count($GLOBALS['hooks']['fluent_mail_loading_app'] ?? []) === 1,
+        'form script is enqueued from FluentSMTP\'s app loader'
+    );
+    $failed += smoke_check(
+        count($GLOBALS['hooks']['wp_ajax_fluentmail-post-settings'] ?? []) === 1,
+        'save interceptor is on FluentSMTP\'s settings action'
+    );
+
+    $interceptor = new FluentSmtpPostal\Admin\SaveInterceptor();
+    $call = function ($method, ...$args) use ($interceptor) {
+        $ref = new ReflectionMethod($interceptor, $method);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
+        return $ref->invokeArgs($interceptor, $args);
+    };
+
+    // Another provider's save must fall through to FluentSMTP untouched: if
+    // the interceptor answered it, wp_send_json_* would end this script here.
+    $_POST = ['connection' => ['provider' => 'smtp', 'sender_email' => 'a@example.test'], 'connection_key' => '0'];
+    $interceptor->maybeHandle();
+    $failed += smoke_check(true, 'non-Postal saves are left to FluentSMTP');
+
+    $failed += smoke_check($call('editingKey') === null, "connection_key '0' means a new connection");
+
+    $mask = '__MASKED_KEY_ENCRYPTED__';
+    $GLOBALS['fluent_settings'] = [
+        'connections' => [
+            'postalkey' => ['provider_settings' => ['provider' => 'postal', 'api_key' => 'stored-postal-key']],
+            'smtpkey'   => ['provider_settings' => ['provider' => 'sendgrid', 'api_key' => 'sendgrid-key']],
+        ],
+    ];
+
+    $connection = $call('sanitizeConnection', ['api_key' => $mask, 'server_url' => 'https://postal.example.test/']);
+    $failed += smoke_check($connection['server_url'] === 'https://postal.example.test', 'server URL is sanitized');
+
+    $resolved = $call('resolveMaskedKey', $connection, 'postalkey');
+    $failed += smoke_check($resolved['api_key'] === 'stored-postal-key', 'masked key resolves to the stored Postal key');
+
+    $resolved = $call('resolveMaskedKey', $connection, 'smtpkey');
+    $failed += smoke_check($resolved['api_key'] === '', "a switched connection does not inherit another provider's key");
+
+    $resolved = $call('resolveMaskedKey', $connection, null);
+    $failed += smoke_check($resolved['api_key'] === '', 'a mask on a new connection is not a key');
+
+    $connection['api_key'] = 'typed-key';
+    $resolved = $call('resolveMaskedKey', $connection, 'postalkey');
+    $failed += smoke_check($resolved['api_key'] === 'typed-key', 'a typed key replaces the stored one');
+
+    $masked = $call('maskConnections', $GLOBALS['fluent_settings']['connections']);
+    $failed += smoke_check(
+        $masked['postalkey']['provider_settings']['api_key'] === $mask && $masked['smtpkey']['provider_settings']['api_key'] === $mask,
+        'connections are returned to the browser masked'
+    );
 }
 
 echo $failed === 0 ? "SMOKE OK\n" : "SMOKE FAILED ($failed)\n";

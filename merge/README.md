@@ -33,22 +33,24 @@ map. Also change the API-key wp-config constant name from
 
 ## Status against FluentSMTP 2.4
 
-The two PHP files are still drop-in. The Vue partial is **not**: it was written
-against the Vue 2 + Element UI era of FluentSMTP, and 2.4 is Vue 3 + Element
-Plus. Port it by copying the shape of an existing API provider in core
-(`Smtp2Go.vue`, `PostMark.vue`):
+All three files are drop-in for FluentSMTP 2.4 (Vue 3 + Element Plus). The Vue
+partial already follows core's provider conventions (`modelValue`, `#content`
+slots, `el-radio-button value=`, `true-value`/`false-value`, a `watch` on
+`connection.key_store` that clears `api_key`), and imports `InputPassword` and
+`Error` from `@/Pieces`, which resolve to core's own pieces on merge.
 
-- `v-model` → `modelValue` + `update:modelValue`
-- `slot="content"` → `#content`
-- `el-radio-button label` → `value`, drop `size="mini"`
-- take `$t` from the app, import `InputPassword` / `Error` / `Errors` from
-  `@/Pieces` and `@/Bits`, and `watch` `connection.key_store` to clear
-  `api_key` the way the other providers do
+Two things in it exist only because it runs as an add-on, and can be deleted
+when it moves into core:
 
-The companion plugin does **not** depend on that port: Postal's fields live on
-its own screen (`Settings → Postal (FluentSMTP)`), and the descriptor it injects
-into FluentSMTP is metadata only (title, logo, defaults, a note pointing at that
-screen).
+- the explicit `import { ElInput, … } from 'element-plus'` and the matching
+  `components` entries - core's build auto-imports Element Plus;
+- the `<el-config-provider :z-index="100000">` wrapper - core's app sets that
+  z-index globally.
+
+Until the merge, the companion plugin registers this component on FluentSMTP's
+app at runtime (`resources/admin/fluentsmtp.js`) and answers Postal saves on
+core's `settings` action (`src/Admin/SaveInterceptor.php`), because core's
+`Settings::store()` reads the title from the static provider catalog.
 
 ### The encryption hand-over needs a migration
 
@@ -79,10 +81,10 @@ files in this directory for the exact code.
    register the `Postal` component. See `connection-wizard.entry.js`.
 
 After these edits, `npm run prod` in the FluentSMTP repo rebuilds the admin app
-with Postal as a first-class provider, and the standalone admin page + AJAX layer
-in this companion plugin (`src/Admin/*`, `src/Support/ConnectionStore.php`,
-`resources/admin/App.vue`, `resources/admin/Modules/Settings/PostalWizard.vue`)
-are no longer needed.
+with Postal as a first-class provider, and the companion plugin's integration
+layer (`src/Admin/*`, `src/Support/ConnectionStore.php`,
+`resources/admin/fluentsmtp.js`, `resources/admin/register.js`) is no longer
+needed.
 
 ## Why this provider exists
 

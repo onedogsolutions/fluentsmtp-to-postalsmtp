@@ -4,8 +4,8 @@
     </span>
 </template>
 <script>
-export default {
-    name: 'Error',
-    props: ['error']
-};
+    export default {
+        name: 'Error',
+        props: ['error']
+    }
 </script>

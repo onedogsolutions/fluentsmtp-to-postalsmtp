@@ -4,7 +4,7 @@ Tags: fluentsmtp, postal, smtp, email, api
 Requires at least: 5.5
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,33 +29,20 @@ connections and resend-from-log all continue to work.
 
 = Requires =
 
-* The FluentSMTP plugin, installed and active
+* The FluentSMTP plugin, installed and active (2.4 or later to add or edit Postal connections)
 * A Postal server with an API-type credential and a verified sending domain
 
 == Installation ==
 
 1. Install and activate FluentSMTP.
 2. Install and activate this plugin.
-3. Go to Settings → Postal (FluentSMTP) and add a connection (server URL, API key, sender).
-4. Test the connection and save.
+3. Go to FluentSMTP → Connections → Add Connection and pick Postal.
+4. Enter the sender, Postal server URL and API key, then Save Connection Settings. The connection is checked against your Postal server before it is saved.
 
-= Why is the Postal form not inside FluentSMTP? =
-
-Postal has no SMTP username or password: it authenticates with a single server
-API key, sent as an X-Server-API-Key header. A Postal connection is therefore a
-server URL plus an API key, and nothing else.
-
-FluentSMTP 2.4.x draws each provider's fields from a Vue component compiled into
-its own bundle, so a separately distributed provider cannot render a form there.
-Postal connections are created, tested and edited at Settings → Postal
-(FluentSMTP) instead. FluentSMTP's connection wizard shows a note pointing to
-that screen, and its Connections screen shows a dismissible notice doing the
-same.
-
-Postal connections still appear in FluentSMTP's connection list with their logo
-and connection details, and are used for matching From addresses exactly like a
-built-in provider. Native fields inside FluentSMTP require merging the provider
-upstream; see the repository's merge/ directory.
+Postal connections are added, edited and deleted in FluentSMTP's own connection
+screen, like any built-in provider. Postal has no SMTP username or password: it
+authenticates with a single server API key, so the form asks for a server URL
+and an API key only.
 
 == Frequently Asked Questions ==
 
@@ -84,6 +71,18 @@ on restore only if its From address has meanwhile been taken by another
 connection.
 
 == Changelog ==
+
+= 1.1.0 =
+* Postal connections are now added and edited inside FluentSMTP's own
+  connection screen: pick Postal in FluentSMTP's provider list and its fields
+  appear under Sender Settings, saved with FluentSMTP's Save button.
+* Removed the separate Settings → Postal (FluentSMTP) screen, its notice on
+  FluentSMTP's page, and its test-email dialog (use FluentSMTP's Email Test
+  screen). The plugin's Settings link now opens FluentSMTP's connections.
+* A saved API key is never sent to the browser; it shows as saved with a
+  Replace button, the same as FluentSMTP's built-in providers.
+* Requires FluentSMTP 2.4 or later to add or edit Postal connections. Existing
+  connections keep sending on older versions.
 
 = 1.0.2 =
 * Fixed: the Postal settings screen rendered blank. The Vue app read its
